@@ -324,5 +324,38 @@ async def main(
             )
 
 
+# Create a module-level server instance for fastmcp cloud discovery
+# This uses environment variables or defaults for configuration
+def _create_default_server():
+    """Create a default server instance using environment variables."""
+    import os
+    from neo4j import AsyncGraphDatabase
+    
+    # Get configuration from environment variables with sensible defaults
+    db_url = os.getenv("NEO4J_URI", os.getenv("NEO4J_URL", "bolt://localhost:7687"))
+    username = os.getenv("NEO4J_USERNAME", "neo4j")
+    password = os.getenv("NEO4J_PASSWORD", "password")
+    database = os.getenv("NEO4J_DATABASE", "neo4j")
+    namespace = os.getenv("NEO4J_NAMESPACE", "")
+    read_timeout = int(os.getenv("NEO4J_READ_TIMEOUT", "30"))
+    token_limit = None
+    if os.getenv("NEO4J_RESPONSE_TOKEN_LIMIT"):
+        token_limit = int(os.getenv("NEO4J_RESPONSE_TOKEN_LIMIT"))
+    
+    # Create Neo4j driver
+    neo4j_driver = AsyncGraphDatabase.driver(db_url, auth=(username, password))
+    
+    # Create and return the MCP server
+    return create_mcp_server(
+        neo4j_driver=neo4j_driver,
+        database=database,
+        namespace=namespace,
+        read_timeout=read_timeout,
+        token_limit=token_limit
+    )
+
+# Module-level server instance for fastmcp cloud discovery
+mcp = _create_default_server()
+
 if __name__ == "__main__":
     main()

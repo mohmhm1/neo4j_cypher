@@ -44,4 +44,7 @@ def main():
     asyncio.run(server.main(**config))
 
 
-__all__ = ["main", "server"]
+# Re-export the mcp server instance for fastmcp cloud discovery
+from .server import mcp
+
+__all__ = ["main", "server", "mcp"]
