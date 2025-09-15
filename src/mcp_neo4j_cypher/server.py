@@ -3,12 +3,6 @@ import logging
 import re
 from typing import Any, Literal, Optional
 
-try:
-    import tiktoken
-    TIKTOKEN_AVAILABLE = True
-except ImportError:
-    TIKTOKEN_AVAILABLE = False
-
 from fastmcp.exceptions import ToolError
 from fastmcp.server import FastMCP
 from fastmcp.tools.tool import TextContent, ToolResult
@@ -20,104 +14,13 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+# Try absolute import first (for fastmcp cloud), fall back to relative import (for package context)
+try:
+    from mcp_neo4j_cypher.utils import _value_sanitize, _truncate_string_to_tokens
+except ImportError:
+    from .utils import _value_sanitize, _truncate_string_to_tokens
+
 logger = logging.getLogger("mcp_neo4j_cypher")
-
-
-def _value_sanitize(d: Any, list_limit: int = 128) -> Any:
-    """
-    Sanitize the input dictionary or list.
-
-    Sanitizes the input by removing embedding-like values,
-    lists with more than 128 elements, that are mostly irrelevant for
-    generating answers in a LLM context. These properties, if left in
-    results, can occupy significant context space and detract from
-    the LLM's performance by introducing unnecessary noise and cost.
-
-    Sourced from: https://github.com/neo4j/neo4j-graphrag-python/blob/main/src/neo4j_graphrag/schema.py#L88
-
-    Parameters
-    ----------
-    d : Any
-        The input dictionary or list to sanitize.
-    list_limit : int
-        The limit for the number of elements in a list.
-
-    Returns
-    -------
-    Any
-        The sanitized dictionary or list.
-    """
-    if isinstance(d, dict):
-        new_dict = {}
-        for key, value in d.items():
-            if isinstance(value, dict):
-                sanitized_value = _value_sanitize(value)
-                if (
-                    sanitized_value is not None
-                ):  # Check if the sanitized value is not None
-                    new_dict[key] = sanitized_value
-            elif isinstance(value, list):
-                if len(value) < list_limit:
-                    sanitized_value = _value_sanitize(value)
-                    if (
-                        sanitized_value is not None
-                    ):  # Check if the sanitized value is not None
-                        new_dict[key] = sanitized_value
-                # Do not include the key if the list is oversized
-            else:
-                new_dict[key] = value
-        return new_dict
-    elif isinstance(d, list):
-        if len(d) < list_limit:
-            return [
-                _value_sanitize(item) for item in d if _value_sanitize(item) is not None
-            ]
-        else:
-            return None
-    else:
-        return d
-
-
-def _truncate_string_to_tokens(
-    text: str, token_limit: int, model: str = "gpt-4"
-) -> str:
-    """
-    Truncates the input string to fit within the specified token limit.
-
-    Parameters
-    ----------
-    text : str
-        The input text string.
-    token_limit : int
-        Maximum number of tokens allowed.
-    model : str
-        Model name (affects tokenization). Defaults to "gpt-4".
-
-    Returns
-    -------
-    str
-        The truncated string that fits within the token limit.
-    """
-    if not TIKTOKEN_AVAILABLE:
-        # Fallback: rough character-based truncation (approximately 3-4 chars per token)
-        max_chars = token_limit * 3
-        if len(text) > max_chars:
-            return text[:max_chars] + "..."
-        return text
-
-    # Load encoding for the chosen model
-    encoding = tiktoken.encoding_for_model(model)
-
-    # Encode text into tokens
-    tokens = encoding.encode(text)
-
-    # Truncate tokens if they exceed the limit
-    if len(tokens) > token_limit:
-        tokens = tokens[:token_limit]
-
-    # Decode back into text
-    truncated_text = encoding.decode(tokens)
-    return truncated_text
 
 
 def _format_namespace(namespace: str) -> str:
@@ -422,9 +325,4 @@ async def main(
 
 
 if __name__ == "__main__":
-    # This is a server module, not meant to be run directly
-    # Use the package entry point instead
-    import sys
-    print("This server is designed to be used as an MCP server.")
-    print("Please use 'python -m mcp_neo4j_cypher' or import it as a module.")
-    sys.exit(1)
+    main()
