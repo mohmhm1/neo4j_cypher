@@ -558,3 +558,4 @@ Replace `/path/to/mcp-neo4j-cypher` with your actual project directory path.
 This MCP server is licensed under the MIT License. This means you are free to use, modify, and distribute the software, subject to the terms and conditions of the MIT License. For more details, please see the LICENSE file in the project repository.
 # neo4j_cypher
 # neo4j_cypher
+# neo4j_cypher
